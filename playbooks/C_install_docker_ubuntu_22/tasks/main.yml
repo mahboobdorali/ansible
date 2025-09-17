@@ -1,0 +1,14 @@
+---
+- name: Ensure target directory exists
+  ansible.builtin.file:
+    path: "{{ target_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Install all docker deb files in target directory
+  ansible.builtin.apt:
+    deb: "{{ target_dir }}/{{ item }}"
+    state: present
+  loop: "{{ docker_files }}"
+  loop_control:
+    label: "{{ item }}"

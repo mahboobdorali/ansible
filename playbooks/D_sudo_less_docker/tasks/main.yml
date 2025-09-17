@@ -1,0 +1,17 @@
+---
+- name: Ensure docker group exists
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Add current user to docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: Notify user to re-login for docker group changes
+  ansible.builtin.debug:
+    msg: >
+      User {{ ansible_user }} added to docker group.
+      Please log out and log back in (or restart SSH session) for changes to take effect.

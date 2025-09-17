@@ -1,0 +1,29 @@
+---
+- name: Ensure docker-images directory exists
+  ansible.builtin.file:
+    path: "{{ docker_images_dir }}"
+    state: directory
+  become: true
+
+- name: Get all tar files in the docker-images directory
+  ansible.builtin.find:
+    paths: "{{ docker_images_dir }}"
+    patterns: "*.tar"
+  register: docker_image_files
+
+- name: Load docker images from tar files
+  ansible.builtin.docker_image:
+    source: load
+    load_path: "{{ item.path }}"
+    timeout: 300
+    name: "{{ item.path | basename | regex_replace('.tar$', '') }}"
+  loop: "{{ docker_image_files.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  become: true
+  when: docker_image_files.matched > 0
+  register: docker_image_result
+  failed_when: >
+    docker_image_result is failed and
+    ('Loaded image:' not in docker_image_result.stdout)
+

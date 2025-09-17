@@ -1,0 +1,24 @@
+---
+- name: Ensure target directory exists
+  ansible.builtin.file:
+    path: "{{ target_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Check if Docker files exist on remote server
+  ansible.builtin.stat:
+    path: "{{ target_dir }}/{{ item }}"
+  register: file_status
+  loop: "{{ docker_files }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Copy missing Docker deb files from control node
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ target_dir }}/{{ item }}"
+    mode: '0644'
+  when: file_status.results[loop.index0].stat.exists is not defined or not file_status.results[loop.index0].stat.exists
+  loop: "{{ docker_files }}"
+  loop_control:
+    label: "{{ item }}"

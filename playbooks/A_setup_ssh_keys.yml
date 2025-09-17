@@ -1,0 +1,40 @@
+---
+- name: Setup SSH keys on selected servers
+  hosts: dummy
+  become: false
+  vars:
+    ssh_key_path: "{{ lookup('env', 'HOME') }}/.ssh/id_rsa"
+    ssh_user: "{{ ansible_user }}"
+
+  tasks:
+    - name: Ensure ~/.ssh directory exists on remote
+      file:
+        path: "/home/{{ ssh_user }}/.ssh"
+        state: directory
+        mode: '0700'
+        owner: "{{ ssh_user }}"
+        group: "{{ ssh_user }}"
+
+    - name: Generate SSH key pair on control machine if not exists
+      delegate_to: localhost
+      become: false
+      openssh_keypair:
+        path: "{{ ssh_key_path }}"
+        type: rsa
+        size: 4096
+      when: not lookup('file', ssh_key_path, errors='ignore')
+
+    - name: Read public key content (only if exists)
+      delegate_to: localhost
+      become: false
+      slurp:
+        src: "{{ ssh_key_path }}.pub"
+      register: pubkey_content
+      when: lookup('file', ssh_key_path + '.pub', errors='ignore')
+
+    - name: Add public key to authorized_keys on remote
+      authorized_key:
+        user: "{{ ssh_user }}"
+        key: "{{ pubkey_content.content | b64decode }}"
+        state: present
+      when: pubkey_content is defined
